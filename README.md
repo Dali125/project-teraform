@@ -1,16 +1,18 @@
-# realstate
+# project teraform
 
-A new Flutter project.
 
-## Getting Started
+## App Vision and Rational 
+Created Wednesday 07 February 2024
 
-This project is a starting point for a Flutter application.
+## VISION
+To Transform the way  Rental Property is Discovered, Advertised and Presented(augmented reality).
+To create a simple platform where these Three acts can be realized .
 
-A few resources to get you started if this is your first Flutter project:
+## Rational(Insight)
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+What is the competitive edge? What have we seen that others have not in our area of interest.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+1. The shear lack of a unified way to find a home and the time wasted. The goal is to save time and ease finding a home.
+
+2. The willingness of Zambians to Adopt app services
+Makes advertisement of property easy and more interactive if an app is made to address this.
