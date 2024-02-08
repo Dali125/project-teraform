@@ -2,8 +2,12 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:geoflutterfire/geoflutterfire.dart';
+
 import 'package:geolocator/geolocator.dart';
+
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:rxdart/rxdart.dart';
 
 
 class MapView extends StatefulWidget {
@@ -17,9 +21,13 @@ class MapView extends StatefulWidget {
 class _MapViewState extends State<MapView> {
 
   final _controller = Completer<GoogleMapController>();
+  final markers = <MarkerId, Marker>{};
 
   late GoogleMapController mapController;
   late Position _currentPosition;
+  late Geoflutterfire geo;
+  late Stream<List<DocumentSnapshot>> stream;
+  final radius = BehaviorSubject<double>.seeded(1.0);
   List<DocumentSnapshot> geoPoints = [];
 
 
@@ -27,21 +35,75 @@ class _MapViewState extends State<MapView> {
   void initState() {
     // TODO: implement initState
     super.initState();
-    _getCurrentLocation();
-    _getGeoPointsFromFirestore();
+       _getGeoPointsFromFirestore();
+    geo = Geoflutterfire();
+    GeoFirePoint center = geo.point(latitude: widget.current_location.latitude,
+        longitude: widget.current_location.longitude);
 
+    stream = radius.switchMap((rad) {
+      final collectionReference = FirebaseFirestore.instance.collection(
+          'posts');
+
+      return geo.collection(collectionRef: collectionReference).within(center: center,
+          radius: rad, field: 'property_location', strictMode: true);
+    });
     setState(() {
       _currentPosition = widget.current_location;
     });
 
   }
-  void _getCurrentLocation() async {
-    Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high);
+
+  void dispose(){
+
+    radius.close();
+    super.dispose();
+  }
+
+
+  void _onMapCreated(GoogleMapController controller){
     setState(() {
-      _currentPosition = position;
+      mapController = controller;
+
+      stream.listen((List<DocumentSnapshot> docList) {
+        _updateMarkers(docList);
+      });
     });
   }
+
+
+
+  void _updateMarkers(List<DocumentSnapshot> docList){
+    docList.forEach((DocumentSnapshot documentSnapshot) {
+
+      final data = documentSnapshot.data() as Map<String, dynamic>;
+      final GeoPoint point = data['property_location']['geopoint'];
+      _addMarker(point.latitude, point.longitude);
+    });
+
+  }
+
+  void _addMarker(double lat, double long){
+    final id = MarkerId(lat.toString()+long.toString());
+
+    final _marker = Marker(markerId: id,
+      position: LatLng(lat, long),
+      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen)
+    );
+    setState(() {
+      markers[id] = _marker;
+    });
+  }
+
+  double _value = 20;
+  String _label = '';
+
+  changed(value){
+    setState(() {
+      _value = value;
+      _label = '${_value.toInt().toString()} kms';
+    });
+  }
+
 
   void _getGeoPointsFromFirestore() async {
     QuerySnapshot snapshot =
@@ -110,33 +172,54 @@ class _MapViewState extends State<MapView> {
           )
 
 
-      :Container(
-        height: MediaQuery.of(context).size.height,
-        width: MediaQuery.of(context).size.width,
-        child: Stack( children:[
-        GoogleMap(
+      :Stack(
+        children: [
+          LayoutBuilder(
 
-            myLocationEnabled: true,
-          myLocationButtonEnabled: false,
-          fortyFiveDegreeImageryEnabled: true,
-          compassEnabled: false,
-          zoomControlsEnabled: false,
-          markers: Set<Marker>.of(_buildMarkers()),
+            builder: (context, constraints) {
 
-          onMapCreated: (controller){
-            _controller.complete(controller);
-          },
-          initialCameraPosition: CameraPosition(
-            target: LatLng(
-                widget.current_location.latitude as double, widget.current_location.longitude as double),
-            zoom: 12,
+              return Container(
+                height: constraints.maxHeight / 1.6,
+                width: MediaQuery.of(context).size.width,
+                child: Stack( children:[
+                GoogleMap(
 
-        )),
+                    myLocationEnabled: true,
+                  myLocationButtonEnabled: false,
+                  fortyFiveDegreeImageryEnabled: true,
+                  compassEnabled: false,
+                  zoomControlsEnabled: false,
+                  markers: Set<Marker>.of(markers.values),
 
-        ]
-      ),
+                  onMapCreated: _onMapCreated,
+                  initialCameraPosition: CameraPosition(
+                    target: LatLng(
+                        widget.current_location.latitude as double, widget.current_location.longitude as double),
+                    zoom: 12,
 
-    )
+                )),
+
+                ]
+              ),
+
+                  );
+            }
+          ),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Slider(
+              activeColor: Colors.blue,
+                divisions: 4,
+                max: 200,
+                min: 1,
+                inactiveColor: Colors.blue.withOpacity(0.2),
+                label: _label,
+                value: _value, onChanged: (value){
+              changed(value);
+            }),
+          )
+        ],
+      )
     );
   }
 }

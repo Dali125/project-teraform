@@ -112,8 +112,7 @@ class _HomePageState extends State<HomePage> {
                         itemBuilder: (context, index){
 
                           final data = snapshot.data!.docs[index];
-                          print("${data['description']}");
-                          print("${data['property_location'][0]}");
+
 
                           return LocationPostTile();
 
