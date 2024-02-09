@@ -42,15 +42,14 @@ dependencies:
   firebase_auth: ^4.17.4
   cloud_firestore: ^4.15.4
   firebase_storage: ^11.6.5
-
-
-
   flutter_bloc:
   permission_handler:
   equatable:
   file_picker:
   geolocator:
   geoflutterfire2: ^2.3.15
+  shimmer:
+
 
   rxdart:
 

@@ -1,14 +1,14 @@
 import 'dart:async';
+import 'dart:developer';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:geoflutterfire/geoflutterfire.dart';
+import 'package:geoflutterfire2/geoflutterfire2.dart';
 
 import 'package:geolocator/geolocator.dart';
 
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:rxdart/rxdart.dart';
-
 
 class MapView extends StatefulWidget {
   final Position current_location;
@@ -19,207 +19,211 @@ class MapView extends StatefulWidget {
 }
 
 class _MapViewState extends State<MapView> {
+  Completer<GoogleMapController> _mapController =
+      Completer<GoogleMapController>();
+  late TextEditingController _latitudeController, _longitudeController;
 
-  final _controller = Completer<GoogleMapController>();
-  final markers = <MarkerId, Marker>{};
-
-  late GoogleMapController mapController;
-  late Position _currentPosition;
-  late Geoflutterfire geo;
+  // firestore init
+  final _firestore = FirebaseFirestore.instance;
+  late GeoFlutterFire geo;
   late Stream<List<DocumentSnapshot>> stream;
   final radius = BehaviorSubject<double>.seeded(1.0);
-  List<DocumentSnapshot> geoPoints = [];
-
+  Map<MarkerId, Marker> markers = <MarkerId, Marker>{};
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
-       _getGeoPointsFromFirestore();
-    geo = Geoflutterfire();
-    GeoFirePoint center = geo.point(latitude: widget.current_location.latitude,
-        longitude: widget.current_location.longitude);
+    _latitudeController = TextEditingController();
+    _longitudeController = TextEditingController();
 
+    geo = GeoFlutterFire();
+    GeoFirePoint center = geo.point(latitude: 12.960632, longitude: 77.641603);
     stream = radius.switchMap((rad) {
-      final collectionReference = FirebaseFirestore.instance.collection(
-          'posts');
+      var collectionReference = _firestore.collection('posts');
+//          .where('name', isEqualTo: 'darshan');
+      return geo.collection(collectionRef: collectionReference).within(
+          center: center,
+          radius: rad,
+          field: 'location-position',
+          strictMode: true);
 
-      return geo.collection(collectionRef: collectionReference).within(center: center,
-          radius: rad, field: 'property_location', strictMode: true);
-    });
-    setState(() {
-      _currentPosition = widget.current_location;
-    });
+      /*
+      ****Example to specify nested object****
 
+      var collectionReference = _firestore.collection('nestedLocations');
+//          .where('name', isEqualTo: 'darshan');
+      return geo.collection(collectionRef: collectionReference).within(
+          center: center, radius: rad, field: 'address.location.position');
+
+      */
+    });
   }
 
-  void dispose(){
-
+  @override
+  void dispose() {
+    _latitudeController.dispose();
+    _longitudeController.dispose();
     radius.close();
     super.dispose();
   }
 
+  @override
+  Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    return MaterialApp(
+      home: Scaffold(
+        body: Container(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Stack(
+                children: [
+                  Center(
+                    child: Container(
+                      decoration: BoxDecoration(
+                          borderRadius: BorderRadius.only(
+                              bottomLeft: Radius.circular(50))),
+                      width: mediaQuery.size.width,
+                      height: mediaQuery.size.height / 1.5,
+                      child: GoogleMap(
+                        compassEnabled: false,
+                        myLocationButtonEnabled: false,
+                        myLocationEnabled: true,
+                        onMapCreated: _onMapCreated,
+                        initialCameraPosition: CameraPosition(
+                          target: LatLng(widget.current_location.latitude,
+                              widget.current_location.longitude),
+                          zoom: 15.0,
+                        ),
+                        markers: Set<Marker>.of(markers.values),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                      top: 40,
+                      left: 10,
+                      child: Center(
+                        child: Container(
+                          height: 52,
+                          width: 54,
+                          decoration: BoxDecoration(
+                              color: Colors.orange,
+                              borderRadius: BorderRadius.circular(30)),
+                          child: IconButton(
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                              },
+                              icon: Icon(Icons.arrow_back_ios)),
+                        ),
+                      )),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.only(left: 20.0, top: 12),
+                child: Text(
+                  "Drag the Slider to expand your Search",
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(left: 20.0),
+                child: Text("Current Radius $_value"),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: Slider(
+                  min: 1,
+                  max: 10000,
+                  divisions: 4,
+                  value: _value,
+                  label: _label,
+                  activeColor: Colors.blue,
+                  inactiveColor: Colors.blue.withOpacity(0.2),
+                  onChanged: (double value) => changed(value),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
-  void _onMapCreated(GoogleMapController controller){
+  void _onMapCreated(GoogleMapController controller) {
     setState(() {
-      mapController = controller;
+      _mapController.complete(controller);
 
-      stream.listen((List<DocumentSnapshot> docList) {
-        _updateMarkers(docList);
+      //start listening after map is created
+      stream.listen((List<DocumentSnapshot> documentList) {
+        _updateMarkers(documentList);
       });
     });
   }
 
-
-
-  void _updateMarkers(List<DocumentSnapshot> docList){
-    docList.forEach((DocumentSnapshot documentSnapshot) {
-
-      final data = documentSnapshot.data() as Map<String, dynamic>;
-      final GeoPoint point = data['property_location']['geopoint'];
-      _addMarker(point.latitude, point.longitude);
-    });
-
+  void _showHome() async {
+    final controller = await _mapController.future;
+    controller.animateCamera(CameraUpdate.newCameraPosition(
+      CameraPosition(
+        target: LatLng(widget.current_location.latitude,
+            widget.current_location.longitude),
+        zoom: 15.0,
+      ),
+    ));
   }
 
-  void _addMarker(double lat, double long){
-    final id = MarkerId(lat.toString()+long.toString());
+  void _addPoint(double lat, double lng) {
+    GeoFirePoint geoFirePoint = geo.point(latitude: lat, longitude: lng);
+    _firestore.collection('posts').add({
+      'name': 'random name',
+      'location-position': geoFirePoint.data
+    }).then((_) {
+      print('added ${geoFirePoint.hash} successfully');
+    });
+  }
 
-    final _marker = Marker(markerId: id,
-      position: LatLng(lat, long),
-      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen)
+  //example to add geoFirePoint inside nested object
+  void _addNestedPoint(double lat, double lng) {
+    GeoFirePoint geoFirePoint = geo.point(latitude: lat, longitude: lng);
+    _firestore.collection('nestedLocations').add({
+      'name': 'random name',
+      'address': {
+        'location': {'position': geoFirePoint.data}
+      }
+    }).then((_) {
+      print('added ${geoFirePoint.hash} successfully');
+    });
+  }
+
+  void _addMarker(double lat, double lng) {
+    final id = MarkerId(lat.toString() + lng.toString());
+    final _marker = Marker(
+      markerId: id,
+      position: LatLng(lat, lng),
+      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet),
+      infoWindow: InfoWindow(title: 'latLng', snippet: '$lat,$lng'),
     );
     setState(() {
       markers[id] = _marker;
     });
   }
 
-  double _value = 20;
+  void _updateMarkers(List<DocumentSnapshot> documentList) {
+    documentList.forEach((DocumentSnapshot document) {
+      Map<String, dynamic> snapData = document.data() as Map<String, dynamic>;
+      final GeoPoint point = snapData['location-position']['geopoint'];
+      _addMarker(point.latitude, point.longitude);
+    });
+  }
+
+  double _value = 20.0;
   String _label = '';
 
-  changed(value){
+  changed(value) {
     setState(() {
       _value = value;
-      _label = '${_value.toInt().toString()} kms';
+      _label = '${{_value.toInt() / 1000}.toString()} kms';
+      markers.clear();
     });
-  }
-
-
-  void _getGeoPointsFromFirestore() async {
-    QuerySnapshot snapshot =
-    await FirebaseFirestore.instance.collection('posts').get();
-    setState(() {
-      geoPoints = snapshot.docs;
-    });
-  }
-
-  List<Marker> _buildMarkers() {
-    List<Marker> markers = [];
-
-    for (var geoPoint in geoPoints) {
-      double latitude = geoPoint['property_location'][0];
-      double longitude = geoPoint['property_location'][1];
-      String name = '$latitude$longitude';
-
-      double distanceInMeters = Geolocator.distanceBetween(_currentPosition.latitude,
-          _currentPosition.longitude,
-          latitude,
-          longitude);
-
-      markers.add(Marker(
-        markerId: MarkerId(name),
-        position: LatLng(latitude, longitude),
-        infoWindow: InfoWindow(title: name, snippet: 'Distance: $distanceInMeters m'),
-        icon: BitmapDescriptor.defaultMarker,
-      ));
-    }
-
-    markers.sort((a, b) => _compareDistances(a, b));
-
-    return markers;
-  }
-
-  int _compareDistances(Marker a, Marker b) {
-    double distanceA = Geolocator.distanceBetween(
-        _currentPosition.latitude,
-        _currentPosition.longitude,
-        a.position.latitude,
-        a.position.longitude);
-    double distanceB = Geolocator.distanceBetween(
-        _currentPosition.latitude,
-        _currentPosition.longitude,
-        b.position.latitude,
-        b.position.longitude);
-    return distanceA.compareTo(distanceB);
-  }
-
-
-
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-
-
-      body: _currentPosition == null ?
-          Container(
-             height: MediaQuery.of(context).size.height,
-            width: MediaQuery.of(context).size.width,
-            child: Center(
-              child: CircularProgressIndicator(),
-            ),
-
-          )
-
-
-      :Stack(
-        children: [
-          LayoutBuilder(
-
-            builder: (context, constraints) {
-
-              return Container(
-                height: constraints.maxHeight / 1.6,
-                width: MediaQuery.of(context).size.width,
-                child: Stack( children:[
-                GoogleMap(
-
-                    myLocationEnabled: true,
-                  myLocationButtonEnabled: false,
-                  fortyFiveDegreeImageryEnabled: true,
-                  compassEnabled: false,
-                  zoomControlsEnabled: false,
-                  markers: Set<Marker>.of(markers.values),
-
-                  onMapCreated: _onMapCreated,
-                  initialCameraPosition: CameraPosition(
-                    target: LatLng(
-                        widget.current_location.latitude as double, widget.current_location.longitude as double),
-                    zoom: 12,
-
-                )),
-
-                ]
-              ),
-
-                  );
-            }
-          ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Slider(
-              activeColor: Colors.blue,
-                divisions: 4,
-                max: 200,
-                min: 1,
-                inactiveColor: Colors.blue.withOpacity(0.2),
-                label: _label,
-                value: _value, onChanged: (value){
-              changed(value);
-            }),
-          )
-        ],
-      )
-    );
+    radius.add(value);
   }
 }

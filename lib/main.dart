@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
@@ -6,12 +8,9 @@ import 'dart:ui';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:projectTeraform/ui/splash_screen/page.dart';
 
-
-
 import 'firebase_options.dart';
 
-
-void main() async{
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
@@ -27,15 +26,12 @@ void main() async{
     ),
   );
   SystemChrome.setSystemUIOverlayStyle(
-    SystemUiOverlayStyle(
+    const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
     ),
   );
-  SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp
-  ]);
+  SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 }
-
 
 Future<void> requestLocationPermission() async {
   // Request permission
@@ -43,14 +39,16 @@ Future<void> requestLocationPermission() async {
 
   // Handle the permission status
   if (status.isGranted) {
-    print('Location permission is granted.');
+    log('Location permission is granted.');
   } else if (status.isDenied) {
-    print('Location permission is denied.');
+    log('Location permission is denied.');
   } else if (status.isPermanentlyDenied) {
-    print('Location permission is permanently denied. Redirecting to app settings...');
+    log('Location permission is permanently denied. Redirecting to app settings...');
     openAppSettings(); // Redirect the user to the app settings
   }
 }
+
+Future<void> requestNotification() async {}
 
 // class HomePage extends StatefulWidget {
 //   const HomePage({Key? key}) : super(key: key);
