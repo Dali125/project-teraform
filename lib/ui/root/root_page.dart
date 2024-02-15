@@ -1,11 +1,16 @@
 
 import 'dart:async';
+import 'dart:developer';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:projectTeraform/ui/profile/page.dart';
+import 'package:projectTeraform/ui/search/page.dart';
+import 'package:provider/provider.dart';
 
 
+import '../../configuration/provider/user/user_provider.dart';
 import '../home/page.dart';
 
 class RootPage extends StatefulWidget {
@@ -23,7 +28,7 @@ class _RootPageState extends State<RootPage> {
 
   final tabs = <Widget>[
     const HomePage(),
-    const Placeholder(),
+    const SearchPage(),
     const Placeholder(),
     const ProfilePage()
 
@@ -37,6 +42,12 @@ class _RootPageState extends State<RootPage> {
   ];
   @override
   Widget build(BuildContext context) {
+
+    String userId = FirebaseAuth.instance.currentUser!.uid;
+
+    final userProvider =
+    Provider.of<UserProvider>(context);
+    final userdata = userProvider.fetchUserData(userId);
     return Scaffold(
 
 

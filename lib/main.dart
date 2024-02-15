@@ -1,14 +1,17 @@
 import 'dart:developer';
-
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/gestures.dart';
-import 'package:flutter/services.dart';
-import 'dart:ui';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:projectTeraform/ui/splash_screen/page.dart';
 
+import 'package:flutter/services.dart';
+
+import 'package:permission_handler/permission_handler.dart';
+import 'package:projectTeraform/configuration/provider/user/user_provider.dart';
+import 'package:projectTeraform/ui/splash_screen/page.dart';
+import 'package:provider/provider.dart';
 import 'firebase_options.dart';
+
+
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,12 +20,24 @@ void main() async {
   );
 
   // Request location permissions
-  await requestLocationPermission();
+  await requestLocationPermission().whenComplete(() => requestNotification());
+
   runApp(
-    MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Login UI with fadeOut animation',
-      home: MyWidget(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => UserProvider())
+      ],
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'Login UI with fadeOut animation',
+        theme: ThemeData(
+          fontFamily: 'Nunito'
+        ),
+        darkTheme:  ThemeData(
+          fontFamily: 'Nunito'
+        ),
+        home: MyWidget(),
+      ),
     ),
   );
   SystemChrome.setSystemUIOverlayStyle(
@@ -48,9 +63,21 @@ Future<void> requestLocationPermission() async {
   }
 }
 
-Future<void> requestNotification() async {}
+Future<void> requestNotification() async {
+  PermissionStatus status = await Permission.notification.request();
 
-// class HomePage extends StatefulWidget {
+// Handle the permission status
+  if (status.isGranted) {
+    log('Notification permission is granted.');
+  } else if (status.isDenied) {
+    log('Notification permission is denied.');
+  } else if (status.isPermanentlyDenied) {
+    log('Notification permission is permanently denied. Redirecting to app settings...');
+    openAppSettings(); // Redirect the user to the app settings
+  }
+}
+
+
 //   const HomePage({Key? key}) : super(key: key);
 //
 //   @override

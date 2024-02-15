@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:developer';
+import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -8,6 +9,7 @@ import 'package:geoflutterfire2/geoflutterfire2.dart';
 import 'package:geolocator/geolocator.dart';
 
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:projectTeraform/ui/home/components/property_view.dart';
 import 'package:rxdart/rxdart.dart';
 
 class MapView extends StatefulWidget {
@@ -29,6 +31,17 @@ class _MapViewState extends State<MapView> {
   late Stream<List<DocumentSnapshot>> stream;
   final radius = BehaviorSubject<double>.seeded(1.0);
   Map<MarkerId, Marker> markers = <MarkerId, Marker>{};
+  OverlayEntry? overlayEntry;
+  LatLng? _lastMapPosition;
+  final double _movementThreshold = 0.6;
+
+  /// Hides the  overlay
+  void clearOverlay() {
+    if (this.overlayEntry != null) {
+      this.overlayEntry?.remove();
+      this.overlayEntry = null;
+    }
+  }
 
   @override
   void initState() {
@@ -67,6 +80,36 @@ class _MapViewState extends State<MapView> {
     super.dispose();
   }
 
+  void _onCameraMove(CameraPosition
+  position) {
+    LatLng newMapPosition = position.target;
+    double distance = _calculateDistance(_lastMapPosition as LatLng, newMapPosition);
+    if (distance > _movementThreshold) {
+      clearOverlay(); // Remove the overlay if the map is moved significantly
+    }
+    _lastMapPosition = newMapPosition;
+  }
+
+
+  double _calculateDistance(LatLng position1, LatLng position2) {
+    double lat1 = position1.latitude;
+    double lon1 = position1.longitude;
+    double lat2 = position2.latitude;
+    double lon2 = position2.longitude;
+
+    const R = 6371.0; // Radius of the Earth in kilometers
+    double dLat = _toRadians(lat2 - lat1);
+    double dLon = _toRadians(lon2 - lon1);
+    double a = sin(dLat / 2) * sin(dLat / 2) +
+        cos(_toRadians(lat1)) * cos(_toRadians(lat2)) * sin(dLon / 2) * sin(dLon / 2);
+    double c = 2 * atan2(sqrt(a), sqrt(1 - a));
+    double distance = R * c;
+    return distance;
+  }
+
+  double _toRadians(double degree) {
+    return degree * pi / 180;
+  }
   @override
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
@@ -84,11 +127,12 @@ class _MapViewState extends State<MapView> {
                           borderRadius: BorderRadius.only(
                               bottomLeft: Radius.circular(50))),
                       width: mediaQuery.size.width,
-                      height: mediaQuery.size.height / 1.5,
+                      height: mediaQuery.size.height / 1.2,
                       child: GoogleMap(
                         compassEnabled: false,
                         myLocationButtonEnabled: false,
                         myLocationEnabled: true,
+                        onCameraMove: _onCameraMove,
                         onMapCreated: _onMapCreated,
                         initialCameraPosition: CameraPosition(
                           target: LatLng(widget.current_location.latitude,
@@ -111,6 +155,7 @@ class _MapViewState extends State<MapView> {
                               borderRadius: BorderRadius.circular(30)),
                           child: IconButton(
                               onPressed: () {
+                                clearOverlay();
                                 Navigator.of(context).pop();
                               },
                               icon: Icon(Icons.arrow_back_ios)),
@@ -125,10 +170,7 @@ class _MapViewState extends State<MapView> {
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.only(left: 20.0),
-                child: Text("Current Radius $_value"),
-              ),
+
               Padding(
                 padding: const EdgeInsets.only(top: 8.0),
                 child: Slider(
@@ -194,24 +236,108 @@ class _MapViewState extends State<MapView> {
     });
   }
 
-  void _addMarker(double lat, double lng) {
+  void _addMarker(double lat, double lng, Map<String, dynamic> snapData) {
     final id = MarkerId(lat.toString() + lng.toString());
     final _marker = Marker(
       markerId: id,
       position: LatLng(lat, lng),
       icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet),
       infoWindow: InfoWindow(title: 'latLng', snippet: '$lat,$lng'),
+      onTap: (){
+        setState(() {
+          _lastMapPosition = LatLng(lat, lng);
+        });
+
+        _showOverlay(snapData);
+
+      }
     );
     setState(() {
       markers[id] = _marker;
     });
   }
 
+  void _showOverlay(Map<String, dynamic> snapData){
+
+    setState(() {
+      final overlayEntry = this.overlayEntry;
+      if(overlayEntry != null){
+        this.overlayEntry?.remove();
+        this.overlayEntry = null;
+
+      }else{
+        this.overlayEntry = OverlayEntry(
+            maintainState: true,
+            builder:
+                (context) => Positioned(
+                bottom: MediaQuery.of(context).size.height /6,
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Stack(
+                    children: [
+                      GestureDetector(
+                        onTap: (){
+                          clearOverlay();
+                          Navigator.push(context, MaterialPageRoute(builder: (context) => ViewProperty(images: snapData['images'][0])));
+                        },
+                        child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(15),
+                              color: Colors.orange,
+                            ),
+
+                            height: MediaQuery.of(context).size.height /6,
+                            width: MediaQuery.of(context).size.width - 15,
+                            child: Row(
+                              children: [
+                                Container(
+                                  height: MediaQuery.of(context).size.height /6,
+                                  width: MediaQuery.of(context).size.width/3,
+
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(15),
+                                    color: Colors.green,
+
+                                  ),
+                                  child: Image.network(snapData['images'][0], fit: BoxFit.fill,),
+                                )
+                              ],
+                            )
+                        ),
+                      ),
+                      Positioned(
+                        top: 5,
+                        left: 5,
+                        child: Container(
+                          height: 40,
+                          width: 40,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(20),
+                            color: Colors.white
+                          ),
+                          child: IconButton(onPressed: (){
+                            clearOverlay();
+                          }, icon: Icon(Icons.close)),
+                        ),
+                      )
+                    ],
+                  ),
+                )));
+        Overlay.of(context)?.insert(this.overlayEntry!);
+      }
+
+    });
+
+
+
+
+  }
+
   void _updateMarkers(List<DocumentSnapshot> documentList) {
     documentList.forEach((DocumentSnapshot document) {
       Map<String, dynamic> snapData = document.data() as Map<String, dynamic>;
       final GeoPoint point = snapData['location-position']['geopoint'];
-      _addMarker(point.latitude, point.longitude);
+      _addMarker(point.latitude, point.longitude, snapData);
     });
   }
 

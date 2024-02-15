@@ -10,7 +10,7 @@ import 'package:projectTeraform/ui/home/components/map_view.dart';
 import 'package:shimmer/shimmer.dart';
 
 import '../search/page.dart';
-import 'components/custom_search_bar.dart';
+import '../search/components/custom_search_bar.dart';
 
 import 'components/location_post_tile.dart';
 import 'components/my_fab.dart';
