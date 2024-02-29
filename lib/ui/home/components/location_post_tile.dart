@@ -1,18 +1,21 @@
 import 'dart:developer';
 
 import 'package:animations/animations.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:projectTeraform/ui/home/components/property_view.dart';
 import 'package:shimmer/shimmer.dart';
 
 class LocationPostTile extends StatefulWidget {
-  final String images;
+  final QueryDocumentSnapshot<Map<String, dynamic>> snapshotData;
+  final List<dynamic> images;
   final String status;
   final String price;
   final String bedrooms;
   final String location;
   const LocationPostTile(
       {Key? key,
+      required this.snapshotData,
       required this.images,
       required this.status,
       required this.price,
@@ -51,7 +54,7 @@ class _LocationPostTileState extends State<LocationPostTile> {
                   color: Colors.red,
                 ),
                 child: Image.network(
-                  widget.images,
+                  widget.images[0],
                   fit: BoxFit.cover,
                   // loadingBuilder: (context, child, loadingProgress) {
                   //   log('${loadingProgress.toString()}');
@@ -89,6 +92,7 @@ class _LocationPostTileState extends State<LocationPostTile> {
                       ),
                       Text(
                         widget.location,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                             fontSize: 18, fontWeight: FontWeight.bold),
                       ),
@@ -99,7 +103,7 @@ class _LocationPostTileState extends State<LocationPostTile> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            '${widget.bedrooms} Bedr',
+                            '${widget.bedrooms} Bedroomss',
                             style: const TextStyle(
                                 fontSize: 16, fontWeight: FontWeight.bold),
                           ),
@@ -119,7 +123,8 @@ class _LocationPostTileState extends State<LocationPostTile> {
         ),
       );
     }, openBuilder: (context, VoidCallback _) {
-      return ViewProperty(images: widget.images);
+      return ViewProperty(
+          snapshotData: widget.snapshotData, images: widget.images);
     });
   }
 }

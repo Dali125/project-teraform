@@ -49,6 +49,9 @@ dependencies:
   geolocator:
   geoflutterfire2: ^2.3.15
   shimmer:
+  dottedcarasoulslider: ^0.0.6
+  url_launcher:
+  flutter_screenutil:
 
 
   rxdart:

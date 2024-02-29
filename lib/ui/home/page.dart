@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:geoflutterfire2/geoflutterfire2.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:projectTeraform/ui/home/components/map_view.dart';
+import 'package:projectTeraform/ui/home/components/view_all_page.dart';
 import 'package:shimmer/shimmer.dart';
 
 import '../search/page.dart';
@@ -78,7 +79,7 @@ class _HomePageState extends State<HomePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
+        title: const Text(
           'Project Teraform',
           style: TextStyle(
               color: Colors.orange, fontSize: 30, fontWeight: FontWeight.bold),
@@ -90,107 +91,233 @@ class _HomePageState extends State<HomePage> {
           child: SingleChildScrollView(
             controller: myScCon,
             physics: const BouncingScrollPhysics(),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(
-                  height: 25,
-                ),
-                const SizedBox(
-                  height: 10,
-                ),
-                StreamBuilder(
-                    stream: FirebaseFirestore.instance
-                        .collection('posts')
-                        .snapshots(),
-                    builder: (context, snapshot) {
-                      if (snapshot.hasData) {
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'Nearby Locations',
-                                  style: Theme.of(context).textTheme.titleLarge,
+            child: locationFound == false
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(
+                        height: 25,
+                      ),
+                      const SizedBox(
+                        height: 10,
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Shimmer(
+                                direction: ShimmerDirection.ltr,
+                                enabled: true,
+                                gradient: LinearGradient(colors: [
+                                  Colors.grey.shade100,
+                                  Colors.grey
+                                ]),
+                                child: Container(
+                                  height: 50,
+                                  width: 150,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(20),
+                                    color: Colors.grey,
+                                  ),
                                 ),
-                                const Text(
-                                  'View All',
-                                  style: TextStyle(color: Colors.blue),
-                                )
-                              ],
-                            ),
-                            const SizedBox(
-                              height: 20,
-                            ),
-                            SizedBox(
-                              height: size.height / 2.4,
-                              width: size.width,
-                              child: ListView.separated(
-                                scrollDirection: Axis.horizontal,
-                                controller: myScCon,
-                                itemCount: snapshot.data!.docs.length,
-                                itemBuilder: (context, index) {
-                                  final data = snapshot.data!.docs[index];
-
-                                  return LocationPostTile(
-                                    images: data['images'][0],
-                                    status: data['property_status'],
-                                    price: data['fees'],
-                                    bedrooms: data['bedrooms'],
-                                    location: data['location'],
-                                  );
-                                },
-                                separatorBuilder:
-                                    (BuildContext context, int index) {
-                                  return const SizedBox(
-                                    width: 13,
-                                  );
-                                },
                               ),
+                              Shimmer(
+                                direction: ShimmerDirection.ltr,
+                                enabled: true,
+                                gradient: LinearGradient(colors: [
+                                  Colors.grey.shade100,
+                                  Colors.grey
+                                ]),
+                                child: Container(
+                                  height: 50,
+                                  width: 150,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(20),
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(
+                            height: 20,
+                          ),
+                          SizedBox(
+                            height: 350,
+                            width: size.width,
+                            child: ListView.separated(
+                              scrollDirection: Axis.horizontal,
+                              controller: myScCon,
+                              itemCount: 4,
+                              itemBuilder: (context, index) {
+                                Shimmer(
+                                  direction: ShimmerDirection.ltr,
+                                  enabled: true,
+                                  gradient: LinearGradient(colors: [
+                                    Colors.grey.shade100,
+                                    Colors.grey
+                                  ]),
+                                  child: Container(
+                                    height: 300,
+                                    width: size.width / 2,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(20),
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                );
+                              },
+                              separatorBuilder:
+                                  (BuildContext context, int index) {
+                                return const SizedBox(
+                                  width: 13,
+                                );
+                              },
                             ),
-                          ],
-                        );
-                      } else {
-                        return const Column(
-                          children: [
-                            Center(
-                              child: CircularProgressIndicator(),
-                            )
-                          ],
-                        );
-                      }
-                    }),
-                SizedBox(
-                  height: 60,
-                ),
-                Stack(
-                  children: [
-                    Container(
-                      width: size.width,
-                      height: size.height / 5,
-                      decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                              begin: Alignment.topRight,
-                              end: Alignment.bottomLeft,
-                              colors: [
-                            Colors.green.shade200,
-                            Colors.green.shade400
-                          ])),
-                    ),
-                    Positioned(
-                        left: 20,
-                        top: 60,
-                        child: Text(
-                          'Featured Properties',
-                          style: TextStyle(
-                              fontSize: 27, fontWeight: FontWeight.bold),
-                        )),
-                  ],
-                ),
-              ],
-            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(
+                        height: 60,
+                      ),
+                      Shimmer(
+                        direction: ShimmerDirection.ltr,
+                        enabled: true,
+                        gradient: LinearGradient(
+                            colors: [Colors.grey.shade100, Colors.grey]),
+                        child: Container(
+                          height: size.height / 3,
+                          width: size.width,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(20),
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(
+                        height: 25,
+                      ),
+                      const SizedBox(
+                        height: 10,
+                      ),
+                      StreamBuilder(
+                          stream: FirebaseFirestore.instance
+                              .collection('posts')
+                              .limit(4)
+                              .snapshots(),
+                          builder: (context, snapshot) {
+                            if (snapshot.hasData) {
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        'Nearby Locations',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleLarge,
+                                      ),
+                                      GestureDetector(
+                                        onTap: () {
+                                          HapticFeedback.vibrate().whenComplete(
+                                              () => Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                      builder: (context) =>
+                                                          ViewAllProperty(
+                                                            current_position:
+                                                                _currentPosition,
+                                                          ))));
+                                        },
+                                        child: const Text(
+                                          'View All',
+                                          style:
+                                              TextStyle(color: Colors.orange),
+                                        ),
+                                      )
+                                    ],
+                                  ),
+                                  const SizedBox(
+                                    height: 20,
+                                  ),
+                                  SizedBox(
+                                    height: size.height / 2.4,
+                                    width: size.width,
+                                    child: ListView.separated(
+                                      scrollDirection: Axis.horizontal,
+                                      controller: myScCon,
+                                      itemCount: snapshot.data!.docs.length,
+                                      itemBuilder: (context, index) {
+                                        final data = snapshot.data!.docs[index];
+
+                                        return LocationPostTile(
+                                          snapshotData: data,
+                                          images: data['images'],
+                                          status: data['property_status'],
+                                          price: data['fees'],
+                                          bedrooms: data['bedrooms'],
+                                          location: data['location'],
+                                        );
+                                      },
+                                      separatorBuilder:
+                                          (BuildContext context, int index) {
+                                        return const SizedBox(
+                                          width: 13,
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              );
+                            } else {
+                              return const Column(
+                                children: [
+                                  Center(
+                                    child: CircularProgressIndicator(),
+                                  )
+                                ],
+                              );
+                            }
+                          }),
+                      const SizedBox(
+                        height: 60,
+                      ),
+                      Stack(
+                        children: [
+                          Container(
+                            width: size.width,
+                            height: size.height / 5,
+                            decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                    begin: Alignment.topRight,
+                                    end: Alignment.bottomLeft,
+                                    colors: [
+                                  Colors.green.shade200,
+                                  Colors.green.shade400
+                                ])),
+                          ),
+                          const Positioned(
+                              left: 20,
+                              top: 60,
+                              child: Text(
+                                'Featured Properties',
+                                style: TextStyle(
+                                    fontSize: 27, fontWeight: FontWeight.bold),
+                              )),
+                        ],
+                      ),
+                    ],
+                  ),
           ),
         ),
       ),

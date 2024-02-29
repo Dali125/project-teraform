@@ -3,15 +3,15 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import 'package:permission_handler/permission_handler.dart';
 import 'package:projectTeraform/configuration/provider/user/user_provider.dart';
+import 'package:projectTeraform/ui/home/cubit/property_cubit.dart';
 import 'package:projectTeraform/ui/splash_screen/page.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
-
-
-
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,24 +20,28 @@ void main() async {
   );
 
   // Request location permissions
-  await requestLocationPermission().whenComplete(() => requestNotification());
+  await requestLocationPermission()
+      .whenComplete(() async => await requestNotification());
 
   runApp(
-    MultiProvider(
+    MultiBlocProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => UserProvider())
+        BlocProvider(create: (_) => PropertyCubit()),
       ],
-      child: MaterialApp(
-        debugShowCheckedModeBanner: false,
-        title: 'Login UI with fadeOut animation',
-        theme: ThemeData(
-          fontFamily: 'Nunito'
-        ),
-        darkTheme:  ThemeData(
-          fontFamily: 'Nunito'
-        ),
-        home: MyWidget(),
-      ),
+      child: MultiProvider(
+          providers: [ChangeNotifierProvider(create: (_) => UserProvider())],
+          child: ScreenUtilInit(
+            designSize: const Size(360, 690),
+            minTextAdapt: true,
+            splitScreenMode: true,
+            builder: (_, child) => MaterialApp(
+              debugShowCheckedModeBanner: false,
+              title: 'Teraform Landlord',
+              theme: ThemeData(fontFamily: 'Nunito'),
+              darkTheme: ThemeData(fontFamily: 'Nunito'),
+              home: MyWidget(),
+            ),
+          )),
     ),
   );
   SystemChrome.setSystemUIOverlayStyle(
